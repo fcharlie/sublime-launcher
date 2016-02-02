@@ -1,0 +1,8 @@
+#Sublime launcher configure
+[Sublime]
+ExecuteFile="D:/Editor/Sublime/SublimeBeta/sublime_text.exe"
+Pwd="."
+AppendPath=[
+  "D:/Clang/bin"
+]
+
