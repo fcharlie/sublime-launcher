@@ -359,6 +359,7 @@ bool PutPathEnvironmentVariableW(std::vector<std::wstring> &pv) {
 	return PutEnvironmentVariableW(L"PATH", path.c_str());
 }
 
+
 bool StartupMiniPosixEnv(SublimeStartupStructure &config, const std::wstring &commandline)
 {
 	SetCurrentDirectoryW(config.pwd.c_str());
@@ -376,24 +377,22 @@ bool StartupMiniPosixEnv(SublimeStartupStructure &config, const std::wstring &co
 	si.cb = sizeof(si);
 	si.dwFlags = STARTF_USESHOWWINDOW;
 	si.wShowWindow = SW_SHOW;
-
-	int const ArraySize = 8192;
+	LPCWSTR pszExecuteFile = nullptr;
+	int const ArraySize = 32767;
 	wchar_t cmdline[ArraySize] = { 0 };
 	HRESULT hr = S_OK;
-	if (commandline.empty()) {
-		hr = StringCchCopyW(cmdline, ArraySize, config.executeFile.c_str());
+	if (PathIsRelativeW(config.executeFile.c_str())) {
+		hr = StringCchCatW(cmdline, ArraySize, config.executeFile.c_str());
 	}
 	else {
-		hr = StringCchCopyW(cmdline, ArraySize, commandline.c_str());
+		pszExecuteFile = config.executeFile.c_str();
+	}
+	if (!commandline.empty()) {
+		hr = StringCchCatW(cmdline, ArraySize, commandline.c_str());
 	}
 
-	if (hr != S_OK) {
-		MessageBoxW(nullptr, L"Please check your profile !", L"Parse commandline failed !", MB_OK | MB_ICONERROR);
-		return false;
-	}
-	///CreateProcess
 	BOOL result = CreateProcessW(
-		NULL,
+		pszExecuteFile,
 		cmdline,
 		NULL,
 		NULL,
@@ -428,10 +427,16 @@ int WINAPI wWinMain(
 	int Argc;
 	LPCWSTR cmdline = GetCommandLineW();
 	std::wstring cmd(cmdline);
+	std::wstring rcmd;
 	LPWSTR *Argv = CommandLineToArgvW(cmdline, &Argc);
 	if (Argc >= 2) {
 		auto np = cmd.find(Argv[0]);
-		cmd.replace(np, wcslen(Argv[0]), config.executeFile.c_str());
+		if (np == 0) {
+			rcmd = cmd.substr(wcslen(Argv[0]) + np);
+		}
+		else if (np == 1) {
+			rcmd = cmd.substr(wcslen(Argv[1] + np +2));
+		}
 	}
 	LocalFree(Argv);
 	return StartupMiniPosixEnv(config, cmd) ? 0 : 2;
