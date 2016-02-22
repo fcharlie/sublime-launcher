@@ -345,48 +345,19 @@ bool PutPathEnvironmentVariableW(std::vector<std::wstring> &pv) {
   return PutEnvironmentVariableW(L"PATH", path.c_str());
 }
 
-inline bool ExecuteFileSearchSpace(const std::wstring &s) {
-  for (auto &c : s) {
-    if (c == ' ')
-      return true;
-  }
-  return false;
-}
-
 #define SUCCESS(y)                                                             \
   if (y != S_OK)                                                               \
     return false;
 
 bool RebuildStartupCommandLine(const std::wstring executeFile, LPWSTR buffer,
                                size_t length) {
-  int Argc = 0;
-  LPCWSTR cmdline = GetCommandLineW();
-  LPCWSTR offsetCmdLine = NULL;
-
-  if (ExecuteFileSearchSpace(executeFile)) {
-    SUCCESS(StringCchCopyW(buffer, length, L"\""));
-    SUCCESS(StringCchCatW(buffer, length, executeFile.c_str()));
-    SUCCESS(StringCchCatW(buffer, length, L"\" "));
-  } else {
-    SUCCESS(StringCchCopyW(buffer, length, executeFile.c_str()));
-    SUCCESS(StringCchCatW(buffer, length, L" "));
+  SUCCESS(StringCchCopyW(buffer, length, L"\""));
+  SUCCESS(StringCchCatW(buffer, length, executeFile.c_str()));
+  SUCCESS(StringCchCatW(buffer, length, L"\" "));
+  LPWSTR Args = PathGetArgsW(GetCommandLineW());
+  if (Args) {
+    SUCCESS(StringCchCatW(buffer, length, Args));
   }
-
-  std::wstring cmd(cmdline);
-  LPWSTR *Argv = CommandLineToArgvW(cmdline, &Argc);
-
-  if (Argc > 1) {
-    auto np = cmd.find(Argv[0]);
-    if (np == 0) {
-      offsetCmdLine = cmdline + wcslen(Argv[0]);
-    } else if (np == 1) {
-      offsetCmdLine = cmdline + wcslen(Argv[0]) + np + 2;
-    } else {
-      offsetCmdLine = cmdline + wcslen(Argv[0]);
-    }
-    StringCchCatW(buffer, length, offsetCmdLine);
-  }
-  LocalFree(Argv);
   return true;
 }
 
